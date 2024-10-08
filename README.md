@@ -42,4 +42,4 @@ Install JDK 16 or higher. Set `JAVA_HOME` environment variable to where it is lo
 ---
 
 - Build output should be located in `main/build/libs/`.
-- If the command returns `Permission Denied` on Linux, run `chmod +x gradlew`
+- If the command returns `Permission Denied` on Linux, run `chmod +x gradlew
