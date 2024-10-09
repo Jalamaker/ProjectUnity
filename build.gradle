@@ -1,5 +1,9 @@
 apply plugin: "java"
 
+plugins{
+    id 'java-library'
+}
+
 version '1.0'
 
 sourceSets.main{
@@ -61,6 +65,40 @@ configurations.all{
     resolutionStrategy.eachDependency { details ->
         if(details.requested.group == 'com.github.Anuken.Arc'){
             details.useVersion "$mindustryVersion"
+        }
+    }
+}
+
+task dex(type: Jar){
+    archiveFileName.set "${modName}.jar"
+
+    final def desktopJar = deploy.archiveFile.get().asFile
+    final def dexJar = new File(dex.temporaryDir, 'Dexed.jar')
+
+    if(!desktopJar.exists() || taskNames.contains('main:deploy')) dependsOn deploy
+    doFirst{
+        println 'Dexifying...'
+        def command = ['d8', '--min-api', sdkAPI, '--output', dexJar, desktopJar]
+        final File[] files =
+            configurations.compileClasspath.asList() +
+            configurations.runtimeClasspath.asList()
+
+        for(def file : files) command += ['--classpath', file.path]
+        command += ['--lib', file("$sdkRoot/platforms/android-$sdkVersion/android.jar")]
+
+        if(OS.isWindows) command = ['cmd', '/c'] + command
+        command.join(' ').execute(null, new File("$buildDir/libs")).waitForProcessOutput(System.out, System.err)
+    }
+
+    from zipTree(desktopJar)
+    from zipTree(dexJar)
+}
+
+task dmove(dependsOn: deploy){
+    doLast{
+        copy{
+            from "build/libs/ProjectUnityDesktop.jar"
+            into System.getenv("destination")
         }
     }
 }
