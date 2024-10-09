@@ -172,7 +172,7 @@ task fetchComps{
             }
         }) })
 
-        threads.each(Thread::start)
+        threads.each(Thread:start)
         while(!fetches.isEmpty()) Thread.currentThread().yield()
 
         fetchTemp.text = "$mindustryVersion/$fetchRevision"
