@@ -2,7 +2,13 @@ apply plugin: "java"
 
 version '1.0'
 
-sourceSets.main.java.srcDirs = ["main/src"]
+sourceSets.main{
+    java.srcDirs = [
+        'src/',
+        "${compileJava.temporaryDir}/fetched",
+        "$buildDir/generated/sources/annotationProcessor/java/main/"
+    ]
+}
 
 repositories{
     mavenCentral()
@@ -16,13 +22,23 @@ java{
 }
 
 ext{
-    //the build number that this mod is made for
+    fetchPackage = 'unity/fetched'
+    fetchDir = file("${compileJava.temporaryDir}/fetched/$fetchPackage")
+    fetchTemp = file("${compileJava.temporaryDir}/fetch.txt")
+    fetchRevision = 0
     mindustryVersion = 'v146'
     jabelVersion = "93fde537c7"
-    //windows sucks
     isWindows = System.getProperty("os.name").toLowerCase().contains("windows")
     sdkRoot = System.getenv("ANDROID_HOME") ?: System.getenv("ANDROID_SDK_ROOT")
 }
+
+import arc.files.*
+import arc.func.*
+import arc.struct.*
+import arc.util.*
+import arc.util.serialization.*
+
+import java.util.concurrent.*
 
 //java 8 backwards compatibility flag
 allprojects{
@@ -35,6 +51,8 @@ dependencies{
     compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
     compileOnly "com.github.Anuken.Mindustry:core:$mindustryVersion"
 
+    compileOnly project(':annotations')
+    annotationProcessor project(':annotations')
     annotationProcessor "com.github.Anuken:jabel:$jabelVersion"
 }
 
@@ -44,6 +62,92 @@ configurations.all{
         if(details.requested.group == 'com.github.Anuken.Arc'){
             details.useVersion "$mindustryVersion"
         }
+    }
+}
+
+class Fetcher{
+    UnsafeRunnable run
+
+    private volatile Throwable error = null
+
+    @SuppressWarnings('all')
+    void execute(){
+        Boolf<UnsafeRunnable> exec = { final UnsafeRunnable run ->
+            try{
+                run.run()
+                error = null
+            }catch(Throwable e){
+                error = e
+            }
+
+            return error != null
+        }
+
+        while(exec.get(run)){}
+    }
+}
+
+task fetchComps{
+    doFirst{
+        delete{ delete fetchDir }
+        fetchDir.mkdir()
+
+        final CopyOnWriteArrayList<Fetcher> fetches = new CopyOnWriteArrayList<>()
+
+        UnsafeRunnable mainRun ={
+            Http.get("https://api.github.com/repos/Anuken/Mindustry/contents/core/src/mindustry/entities/comp?ref=$mindustryVersion")
+                .error({ final t -> throw new RuntimeException(t) })
+                .block({ final res ->
+                    final def list = Jval.read(res.getResultAsString()).asArray()
+                    println "Found $list.size entity components."
+
+                    for(final Jval val : list){
+                        final def filename = val.get('name').asString()
+                        final def fileurl = val.get('download_url').asString()
+
+                        final UnsafeRunnable run ={
+                            Http.get(fileurl)
+                                .error({ final t -> throw new RuntimeException(t) })
+                                .block({ final comp ->
+                                    final def content = comp.getResultAsString()
+                                        .replace('mindustry.entities.comp', fetchPackage.replace('/', '.'))
+                                        .replace('mindustry.annotations.Annotations.*', 'unity.annotations.Annotations.*')
+                                        .replaceAll('@Component\\((base = true|.)+\\)\n*', '@EntityComponent(base = true, write = false)\n')
+                                        .replaceAll('@Component\n*', '@EntityComponent(write = false)\n')
+                                        .replaceAll('@BaseComponent\n*', '@EntityBaseComponent\n')
+                                        .replaceAll('@CallSuper\n*', '')
+                                        .replaceAll('@Final\n*', '')
+                                        .replaceAll('@EntityDef\\(*.*\\)*\n*', '')
+
+                                    if(content.isEmpty()) throw new IllegalStateException()
+
+                                    final def fi = Fi.get("$fetchDir/$filename")
+                                    fi.writeString(content, false)
+                                })
+                        }
+
+                        fetches.add(new Fetcher(run: run))
+                    }
+                })
+        }
+
+        new Fetcher(run: mainRun).execute()
+
+        final def found = fetches.size()
+
+        Seq<Thread> threads = Seq.with(fetches).map({ final Fetcher fetch -> new Thread({
+            fetch.execute()
+            synchronized(fetches){
+                fetches.remove(fetch)
+                print '\b'
+            }
+        }) })
+
+        threads.each(Thread:start)
+        while(!fetches.isEmpty()) Thread.currentThread().yield()
+
+        fetchTemp.text = "$mindustryVersion/$fetchRevision"
+        println "Wrote $found entity components."
     }
 }
 
@@ -97,4 +201,66 @@ task deploy(type: Jar){
             delete "$buildDir/libs/${project.archivesBaseName}Android.jar"
         }
     }
+
+        if(!spritesDir.exists()){
+        finalizedBy ':tools:proc'
+        if(taskNames.contains('main:deploy')) println 'Sprites folder not found; automatically generating sprites...'
+    }
+
+    archiveFileName.set "${modName}Desktop.jar"
+
+    from files(sourceSets.main.output.classesDirs)
+    from files(sourceSets.main.output.resourcesDir)
+    from configurations.runtimeClasspath.collect{ it.isDirectory() ? it : zipTree(it) }
+    from files(assetsDir){ exclude 'sprites/vanilla/**' }
+
+    from(rootDir){
+        include 'mod.json'
+        include 'icon.png'
+    }
+
+    doFirst{
+        println "Deploying ${devBuild ? 'dev' : 'user'} build."
+    }
+}
+
+task cleanFetched(type: Delete){
+    delete "$projectDir/fetched"
+    delete "$fetchTemp"
+}
+
+task assetsJar(type: Jar){
+    archiveClassifier.set 'assets'
+    from files('assets/')
+}
+
+artifacts{
+    archives assetsJar
+}
+
+tasks.withType(JavaCompile){
+    if(!fetchDir.exists() || !fetchTemp.exists()){
+        dependsOn fetchComps
+    }else{
+        String[] content = fetchTemp.text.split('/')
+        String ver = content[0]
+        String rev = content[1]
+
+        if(ver != "$mindustryVersion" as String || rev != Integer.toString(fetchRevision as int)){
+            dependsOn fetchComps
+        }
+    }
+
+    options.compilerArgs += ['--release', '8']
+}
+
+tasks.withType(Jar){
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    exclude 'unity/fetched/**'
+    exclude 'unity/entities/comp/**'
+    exclude 'unity/entities/merge/**'
+    if(!devBuild) exclude 'unity/mod/DevBuildImpl*'
+
+    exclude 'sprites/vanilla/**'
 }

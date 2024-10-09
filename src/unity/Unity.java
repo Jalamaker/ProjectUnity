@@ -20,14 +20,14 @@ import mindustry.mod.*;
 import mindustry.mod.Mods.*;
 import mindustry.world.blocks.environment.*;
 import unity.ai.kami.*;
-import unity.annotations.Annotations.*;
+//import unity.annotations.Annotations.*;
 import unity.assets.list.*;
 import unity.assets.loaders.*;
 import unity.assets.type.g3d.*;
 import unity.async.*;
 import unity.content.*;
 import unity.editor.*;
-import unity.gen.*;
+//import unity.gen.*;
 import unity.map.*;
 import unity.map.cinematic.*;
 import unity.map.objectives.*;
@@ -82,13 +82,13 @@ public class Unity extends Mod{
     public static ContentScoreProcess scoring;
 
     /** All Unity's defined non-anonymous classes; the elements of this array will be generated. */
-    @ListClasses
-    public static final Seq<String> classes = Seq.with();
+    //@ListClasses
+    //public static final Seq<String> classes = Seq.with();
     /** All Unity's defined packages; the elements of this array will be generated. */
-    @ListPackages
-    public static final Seq<String> packages = Seq.with("java.lang", "java.util", "java.io", "rhino");
+    //@ListPackages
+    //public static final Seq<String> packages = Seq.with("java.lang", "java.util", "java.io", "rhino");
 
-    public Unity(){
+    /*public Unity(){
         this(false);
     }
 
@@ -215,7 +215,7 @@ public class Unity extends Mod{
             JSBridge.init();
             JSBridge.importDefaults(JSBridge.unityScope);
         });
-    }
+    }*/
 
     @Override
     public void init(){
@@ -248,13 +248,13 @@ public class Unity extends Mod{
         UnityParts.load();
         Overwriter.load();
 
-        FactionMeta.init();
-        UnityEntityMapping.init();
+        /*FactionMeta.init();
+        UnityEntityMapping.init();*/
 
-        logContent();
+        //logContent();
     }
 
-    public void logContent(){
+    /*public void logContent(){
         for(Faction faction : Faction.all){
             Seq<Object> array = FactionMeta.getByFaction(faction, Object.class);
             print(LogLevel.debug, "", Strings.format("Faction @ has @ contents.", faction, array.size));
@@ -277,7 +277,7 @@ public class Unity extends Mod{
                 }
             });
         }
-    }
+    }*/
 
     protected void addCredits(){
         try{
