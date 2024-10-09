@@ -269,18 +269,6 @@ artifacts{
     archives assetsJar
 }
 
-tasks.withType(JavaCompile){
-    String[] content = fetchTemp.text.split('/')
-    String ver = content[0]
-    String rev = content[1]
-
-    if(ver != "$mindustryVersion" as String || rev != Integer.toString(fetchRevision as int)){
-        dependsOn fetchComps
-    }
-
-    options.compilerArgs += ['--release', '8']
-}
-
 tasks.withType(Jar){
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
