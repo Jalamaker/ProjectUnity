@@ -100,7 +100,7 @@ task dex(type: Jar){
         command.join(' ').execute(null, new File("$buildDir/libs")).waitForProcessOutput(System.out, System.err)
     }
 
-    from zipTree(desktopJar)
+    //from zipTree(desktopJar)
     from zipTree(dexJar)
 }
 
