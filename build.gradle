@@ -113,7 +113,7 @@ task dmove(dependsOn: deploy){
     }
 }
 
-class Fetcher{
+/*class Fetcher{
     UnsafeRunnable run
 
     private volatile Throwable error = null
@@ -197,7 +197,7 @@ task fetchComps{
         fetchTemp.text = "$mindustryVersion/$fetchRevision"
         println "Wrote $found entity components."
     }
-}
+}*/
 
 task jarAndroid{
     dependsOn "jar"
