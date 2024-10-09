@@ -85,7 +85,7 @@ task dex(type: Jar){
     //final def desktopJar = deploy.archiveFile.get().asFile
     final def dexJar = new File(dex.temporaryDir, 'Dexed.jar')
 
-    if(!desktopJar.exists() || taskNames.contains('main:deploy')) dependsOn deploy
+    //if(!desktopJar.exists() || taskNames.contains('main:deploy')) dependsOn deploy
     doFirst{
         println 'Dexifying...'
         def command = ['d8', '--min-api', sdkAPI, '--output', dexJar, desktopJar]
