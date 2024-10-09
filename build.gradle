@@ -244,7 +244,6 @@ task deploy(type: Jar){
     from files(sourceSets.main.output.classesDirs)
     from files(sourceSets.main.output.resourcesDir)
     from configurations.runtimeClasspath.collect{ it.isDirectory() ? it : zipTree(it) }
-    from files(assetsDir){ exclude 'sprites/vanilla/**' }
 
     from(rootDir){
         include 'mod.json'
