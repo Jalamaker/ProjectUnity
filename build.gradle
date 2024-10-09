@@ -1,10 +1,20 @@
 apply plugin: "java"
 
-plugins{
-    id 'java-library'
-}
-
 version '1.0'
+
+buildscript{
+    dependencies{
+        classpath "com.github.Anuken.MindustryJitpack:core:$mindustryVersion"
+        classpath "com.squareup:javapoet:$javapoetVersion"
+        classpath "com.github.Anuken:jabel:$jabelVersion"
+    }
+
+    repositories{
+        mavenCentral()
+        maven{ url "https://raw.githubusercontent.com/Zelaux/MindustryRepo/master/repository" }
+        maven{ url 'https://jitpack.io' }
+    }
+}
 
 sourceSets.main{
     java.srcDirs = [
