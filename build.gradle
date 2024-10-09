@@ -82,7 +82,7 @@ configurations.all{
 task dex(type: Jar){
     archiveFileName.set "${modName}.jar"
 
-    final def desktopJar = deploy.archiveFile.get().asFile
+    //final def desktopJar = deploy.archiveFile.get().asFile
     final def dexJar = new File(dex.temporaryDir, 'Dexed.jar')
 
     if(!desktopJar.exists() || taskNames.contains('main:deploy')) dependsOn deploy
